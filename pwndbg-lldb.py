@@ -25,6 +25,23 @@ PARSER.add_argument(
     action="store_true",
     help="Tells the debugger to wait for a process with the given pid or name to launch before attaching.",
 )
+PARSER.add_argument(
+    "-s",
+    "--silent",
+    action="store_true",
+    help="Suppresses hello message and other output from the Pwndbg CLI.",
+)
+PARSER.add_argument(
+    "-f",
+    "--lldb-flags",
+    help="Additional lldb flags.",
+)
+PARSER.add_argument(
+    "--commands",
+    nargs='*',
+    default=[],
+    help="commands to run after starting the debugger",
+)
 
 
 def find_lldb_version() -> List[int]:
@@ -87,6 +104,7 @@ if __name__ == "__main__":
 
     lldb.SBDebugger.Initialize()
     debugger = lldb.SBDebugger.Create()
+    os.environ.setdefault('LLDB_FLAGS', '')
 
     # Resolve the location of lldbinit.py based on the environment, if needed.
     lldbinit_dir = os.path.dirname(sys.argv[0])
@@ -114,6 +132,14 @@ if __name__ == "__main__":
     if debug:
         print("[-] Launcher: Initializing Pwndbg")
     lldbinit.main(debugger, lldb_version[0], lldb_version[1], debug=debug)
+
+    # Update the LLDB flags:
+    extra_flags = args.lldb_flags if args.lldb_flags else "bl"
+    # the default additional flags:
+    # the b flag allows us to batch execute commands, which is useful for automization and testing
+    # the l flag is used for allowing running script languages in the lldb environment,
+    # like python we want to run.
+    os.environ['LLDB_FLAGS'] += extra_flags
 
     from pwndbg.dbg.lldb.repl import PwndbgController
     from pwndbg.dbg.lldb.repl import print_error
@@ -159,6 +185,7 @@ if __name__ == "__main__":
             "have both a target and an attach request, your target may be overwritten on attach"
         )
 
+    startup += args.commands
     def drive(startup: List[str] | None):
         async def drive(c: PwndbgController):
             if startup is not None:
@@ -170,7 +197,7 @@ if __name__ == "__main__":
 
         return drive
 
-    run_repl(drive(startup), debug=debug)
+    run_repl(drive(startup), debug=debug, silent=args.silent)
 
     # Dispose of our debugger and terminate LLDB.
     lldb.SBDebugger.Destroy(debugger)

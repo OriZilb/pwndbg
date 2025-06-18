@@ -43,6 +43,7 @@ import re
 import shutil
 import signal
 import sys
+import subprocess
 import threading
 from contextlib import contextmanager
 from io import BytesIO
@@ -284,7 +285,7 @@ def print_hint(msg: str, *args):
 @wrap_with_history
 def run(
     controller: Callable[[PwndbgController], Coroutine[Any, Any, None]], debug: bool = False
-) -> None:
+, silent: bool = False) -> None:
     """
     Runs the Pwndbg CLI through the given asynchronous controller.
     """
@@ -315,7 +316,8 @@ def run(
 
     signal.signal(signal.SIGINT, handle_sigint)
 
-    show_greeting()
+    if not silent:
+        show_greeting()
     last_command = ""
 
     coroutine = controller(PwndbgController())
@@ -376,7 +378,7 @@ def run(
             last_command = action._command
 
             if not action._prompt_silent:
-                print(f"{PROMPT}{action._command}")
+                print(f"{PROMPT}{action._command}", flush=True)
 
             if action._capture:
                 with BytesIO() as output:
@@ -625,6 +627,11 @@ def exec_repl_command(
     if bits[0] == "ipi":
         # Spawn IPython shell, easy for debugging
         run_ipython_shell()
+        return True
+
+    if bits[0] == "python3":
+        # run python code
+        subprocess.run(bits, stdout=sys.stdout, stderr=sys.stderr)
         return True
 
     if (

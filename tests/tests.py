@@ -14,6 +14,12 @@ from typing import List
 from typing import Tuple
 
 root_dir = os.path.realpath("../")
+GDB_RUN_PYTHON = lambda py_module: ["--command", f"{py_module}"]
+GDB_RUN_PRESCRIPT = lambda prescript: ["-ex", f"{prescript}"] if prescript else []
+LLDB_RUN_PYTHON = lambda py_module: f"'python3 {py_module}'"
+LLDB_RUN_PRESCRIPT = lambda prescript: f"'python3 -c \"{prescript}\"'" if prescript else ""
+GDB_QUIT = ["--eval-command", "quit"]
+INITIALIZE_GDB = ["--init-command", "/pwndbg/gdbinit.py"]
 
 
 def reserve_port(ip="127.0.0.1", port=0):
@@ -84,6 +90,9 @@ def make_binaries(test_dir: str):
         sys.exit(1)
 
 
+""" note that this function is not good because it allows running arbitrary gdb commands, 
+    but it is actually used only to run python code. 
+
 def run_gdb(
     gdb_path: str, gdb_args: List[str], env=None, capture_output=True
 ) -> CompletedProcess[str]:
@@ -95,24 +104,52 @@ def run_gdb(
         text=True,
     )
 
+"""
+
+
+def run_python_with_debugger(python_module: str, prescript=None, env=None, capture_output=True
+                             ) -> CompletedProcess[str]:
+    """
+    Runs a Python module with the debugger, using the environment variables set by pwndbg.
+    If `prescript` is provided, it will be executed before running the Python module.
+    The prescript is used by the rest of the code as inline python and not as a separate file,
+    so I'll keep it that way.
+    """
+    env = os.environ if env is None else env
+    if os.environ['PWNDBG_DEBUGGER'] == 'gdb' or os.environ['PWNDBG_DEBUGGER'] == 'gdb-multiarch':
+        return subprocess.run(
+            [os.environ['DEBUGGER_COMMAND'], "--silent", "--nx", "--nh"] + GDB_RUN_PRESCRIPT(
+                prescript) + GDB_RUN_PYTHON(python_module) + INITIALIZE_GDB + GDB_QUIT,
+            env=env,
+            capture_output=capture_output,
+            text=True,
+        )
+    elif os.environ['PWNDBG_DEBUGGER'] == 'lldb':
+        command = [os.environ['DEBUGGER_COMMAND'], "--silent", "--commands"] + [LLDB_RUN_PRESCRIPT(prescript),
+                                                                                LLDB_RUN_PYTHON(python_module), "quit"]
+        command = ' '.join(command)
+        return subprocess.run(
+            command,
+            env=env,
+            capture_output=capture_output,
+            text=True,
+            shell=True
+        )
+
 
 def get_tests_list(
-    collect_only: bool,
-    test_name_filter: str,
-    gdb_path: str,
-    gdbinit_path: str,
-    test_dir_path: str,
+        collect_only: bool,
+        test_name_filter: str,
+        gdbinit_path: str,
+        test_dir_path: str,
 ) -> List[str]:
     # NOTE: We run tests under GDB sessions and because of some cleanup/tests dependencies problems
     # we decided to run each test in a separate GDB session
-    gdb_args = ["--command", "pytests_collect.py"]
-    if gdbinit_path:
-        gdb_args.extend(["--init-command", gdbinit_path])
 
     env = os.environ.copy()
     env["TESTS_PATH"] = os.path.join(os.path.dirname(os.path.realpath(__file__)), test_dir_path)
 
-    result = run_gdb(gdb_path, gdb_args, env=env)
+    result = run_python_with_debugger("/pwndbg/tests/pytests_collect.py", env=env)
     tests_collect_output = result.stdout
 
     if result.returncode == 1:
@@ -134,17 +171,12 @@ TEST_RETURN_TYPE = Tuple[CompletedProcess[str], str, float]
 
 
 def run_test(
-    test_case: str, args: argparse.Namespace, gdb_path: str, gdbinit_path: str, port: int = None
+        test_case: str, args: argparse.Namespace, gdb_path: str, gdbinit_path: str, port: int = None
 ) -> TEST_RETURN_TYPE:
-    gdb_args = ["--command", "pytests_launcher.py"]
-    if gdbinit_path:
-        gdb_args.extend(["--init-command", gdbinit_path])
-
+    prescript = None
     if args.cov:
-        gdb_args = [
-            "-ex",
-            "py import sys;print(sys.path);import coverage;coverage.process_startup();",
-        ] + gdb_args
+        prescript = "import sys;sys.path.append('/pwndbg');import coverage;coverage.process_startup();"
+
     env = os.environ.copy()
     env["LANG"] = "en_US.UTF-8"
     env["SRC_DIR"] = root_dir
@@ -158,7 +190,9 @@ def run_test(
         env["QEMU_PORT"] = str(port)
 
     started_at = time.time()
-    result = run_gdb(gdb_path, gdb_args, env=env, capture_output=not args.serial)
+    # result = run_gdb(gdb_path, gdb_args, env=env, capture_output=not args.serial)
+    result = run_python_with_debugger("/pwndbg/tests/pytests_launcher.py", prescript=prescript, env=env,
+                                      capture_output=not args.serial)
     duration = time.time() - started_at
     return result, test_case, duration
 
@@ -210,11 +244,11 @@ class TestStats:
 
 
 def run_tests_and_print_stats(
-    tests_list: List[str],
-    args: argparse.Namespace,
-    gdb_path: str,
-    gdbinit_path: str,
-    test_dir_path: str,
+        tests_list: List[str],
+        args: argparse.Namespace,
+        gdb_path: str,
+        gdbinit_path: str,
+        test_dir_path: str,
 ):
     stats = TestStats()
     start = time.time()
@@ -253,7 +287,7 @@ def run_tests_and_print_stats(
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Run tests.")
-    parser.add_argument("-t", "--type", dest="type", choices=["gdb", "cross-arch"], default="gdb")
+    parser.add_argument("-t", "--type", dest="type", choices=["gdb", "cross-arch", "lldb"], default="gdb")
 
     parser.add_argument(
         "-p",
@@ -290,6 +324,7 @@ def parse_args():
 TEST_FOLDER_NAME = {
     "gdb": "gdb-tests/tests",
     "cross-arch": "qemu-tests/tests/user",
+    "lldb": "lldb-tests/tests",
 }
 
 
@@ -311,7 +346,17 @@ def main():
         gdbinit_path = os.path.join(root_dir, "gdbinit.py")
         if args.type == "gdb":
             gdb_path = shutil.which("gdb")
+            os.environ['PWNDBG_DEBUGGER'] = 'gdb'
+            INITIALIZE_GDB[1] = gdbinit_path
+
+        elif args.type == "lldb":
+            os.environ['PWNDBG_DEBUGGER'] = 'lldb'
+            lldb_command = f"uv run python /pwndbg/pwndbg-lldb.py"
+            gdb_path = ""
+
         elif args.type == "cross-arch":
+            INITIALIZE_GDB[1] = gdbinit_path
+            os.environ['PWNDBG_DEBUGGER'] = 'gdb-multiarch'
             if (gdb_multiarch := shutil.which("gdb-multiarch")) is not None:
                 gdb_path = gdb_multiarch
             else:
@@ -326,22 +371,28 @@ def main():
                         "gdb-multiarch not found, and gdb does not support cross architecture targets"
                     )
 
-    os.environ["GDB_INIT_PATH"] = gdbinit_path
-    os.environ["GDB_BIN_PATH"] = gdb_path
+    # The command that will be used to run the debugger
+    os.environ["DEBUGGER_COMMAND"] = gdb_path if gdb_path else lldb_command
 
     test_dir_path = TEST_FOLDER_NAME[args.type]
 
     ensure_zig_path()
 
-    if args.type in ("gdb", "cross-arch"):
+    if args.type in ("gdb", "cross-arch", "lldb"):
         make_binaries(test_dir_path)
     else:
         raise NotImplementedError(args.type)
 
-    tests_list = get_tests_list(
-        args.collect_only, args.test_name_filter, gdb_path, gdbinit_path, test_dir_path
-    )
-    run_tests_and_print_stats(tests_list, args, gdb_path, gdbinit_path, test_dir_path)
+    if args.type == "gdb" or args.type == "cross-arch":
+        tests_list = get_tests_list(
+            args.collect_only, args.test_name_filter, gdbinit_path, test_dir_path
+        )
+        run_tests_and_print_stats(tests_list, args, gdb_path, gdbinit_path, test_dir_path)
+    elif args.type == "lldb":
+        tests_list = get_tests_list(
+            args.collect_only, args.test_name_filter, gdbinit_path, test_dir_path
+        )
+        run_tests_and_print_stats(tests_list, args, gdb_path, gdbinit_path, test_dir_path)
 
 
 if __name__ == "__main__":
