@@ -42,8 +42,8 @@ import os
 import re
 import shutil
 import signal
-import sys
 import subprocess
+import sys
 import threading
 from contextlib import contextmanager
 from io import BytesIO
@@ -284,8 +284,10 @@ def print_hint(msg: str, *args):
 
 @wrap_with_history
 def run(
-    controller: Callable[[PwndbgController], Coroutine[Any, Any, None]], debug: bool = False
-, silent: bool = False) -> None:
+    controller: Callable[[PwndbgController], Coroutine[Any, Any, None]],
+    debug: bool = False,
+    silent: bool = False,
+) -> None:
     """
     Runs the Pwndbg CLI through the given asynchronous controller.
     """

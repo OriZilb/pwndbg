@@ -165,4 +165,3 @@ def main(debugger: lldb.SBDebugger, major: int, minor: int, debug: bool = False)
     if os.environ.get("PWNDBG_PROFILE") == "1":
         pwndbg.profiling.profiler.stop("pwndbg-load.pstats")
         pwndbg.profiling.profiler.start()
-

@@ -38,7 +38,7 @@ PARSER.add_argument(
 )
 PARSER.add_argument(
     "--commands",
-    nargs='*',
+    nargs="*",
     default=[],
     help="commands to run after starting the debugger",
 )
@@ -104,7 +104,7 @@ if __name__ == "__main__":
 
     lldb.SBDebugger.Initialize()
     debugger = lldb.SBDebugger.Create()
-    os.environ.setdefault('LLDB_FLAGS', '')
+    os.environ.setdefault("LLDB_FLAGS", "")
 
     # Resolve the location of lldbinit.py based on the environment, if needed.
     lldbinit_dir = os.path.dirname(sys.argv[0])
@@ -139,7 +139,7 @@ if __name__ == "__main__":
     # the b flag allows us to batch execute commands, which is useful for automization and testing
     # the l flag is used for allowing running script languages in the lldb environment,
     # like python we want to run.
-    os.environ['LLDB_FLAGS'] += extra_flags
+    os.environ["LLDB_FLAGS"] += extra_flags
 
     from pwndbg.dbg.lldb.repl import PwndbgController
     from pwndbg.dbg.lldb.repl import print_error
@@ -186,6 +186,7 @@ if __name__ == "__main__":
         )
 
     startup += args.commands
+
     def drive(startup: List[str] | None):
         async def drive(c: PwndbgController):
             if startup is not None:

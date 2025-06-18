@@ -90,8 +90,8 @@ def make_binaries(test_dir: str):
         sys.exit(1)
 
 
-""" note that this function is not good because it allows running arbitrary gdb commands, 
-    but it is actually used only to run python code. 
+""" note that this function is not good because it allows running arbitrary gdb commands,
+    but it is actually used only to run python code.
 
 def run_gdb(
     gdb_path: str, gdb_args: List[str], env=None, capture_output=True
@@ -103,12 +103,12 @@ def run_gdb(
         capture_output=capture_output,
         text=True,
     )
-
 """
 
 
-def run_python_with_debugger(python_module: str, prescript=None, env=None, capture_output=True
-                             ) -> CompletedProcess[str]:
+def run_python_with_debugger(
+    python_module: str, prescript=None, env=None, capture_output=True
+) -> CompletedProcess[str]:
     """
     Runs a Python module with the debugger, using the environment variables set by pwndbg.
     If `prescript` is provided, it will be executed before running the Python module.
@@ -116,32 +116,34 @@ def run_python_with_debugger(python_module: str, prescript=None, env=None, captu
     so I'll keep it that way.
     """
     env = os.environ if env is None else env
-    if os.environ['PWNDBG_DEBUGGER'] == 'gdb' or os.environ['PWNDBG_DEBUGGER'] == 'gdb-multiarch':
+    if os.environ["PWNDBG_DEBUGGER"] == "gdb" or os.environ["PWNDBG_DEBUGGER"] == "gdb-multiarch":
         return subprocess.run(
-            [os.environ['DEBUGGER_COMMAND'], "--silent", "--nx", "--nh"] + GDB_RUN_PRESCRIPT(
-                prescript) + GDB_RUN_PYTHON(python_module) + INITIALIZE_GDB + GDB_QUIT,
+            [os.environ["DEBUGGER_COMMAND"], "--silent", "--nx", "--nh"]
+            + GDB_RUN_PRESCRIPT(prescript)
+            + GDB_RUN_PYTHON(python_module)
+            + INITIALIZE_GDB
+            + GDB_QUIT,
             env=env,
             capture_output=capture_output,
             text=True,
         )
-    elif os.environ['PWNDBG_DEBUGGER'] == 'lldb':
-        command = [os.environ['DEBUGGER_COMMAND'], "--silent", "--commands"] + [LLDB_RUN_PRESCRIPT(prescript),
-                                                                                LLDB_RUN_PYTHON(python_module), "quit"]
-        command = ' '.join(command)
+    elif os.environ["PWNDBG_DEBUGGER"] == "lldb":
+        command = [os.environ["DEBUGGER_COMMAND"], "--silent", "--commands"] + [
+            LLDB_RUN_PRESCRIPT(prescript),
+            LLDB_RUN_PYTHON(python_module),
+            "quit",
+        ]
+        command = " ".join(command)
         return subprocess.run(
-            command,
-            env=env,
-            capture_output=capture_output,
-            text=True,
-            shell=True
+            command, env=env, capture_output=capture_output, text=True, shell=True
         )
 
 
 def get_tests_list(
-        collect_only: bool,
-        test_name_filter: str,
-        gdbinit_path: str,
-        test_dir_path: str,
+    collect_only: bool,
+    test_name_filter: str,
+    gdbinit_path: str,
+    test_dir_path: str,
 ) -> List[str]:
     # NOTE: We run tests under GDB sessions and because of some cleanup/tests dependencies problems
     # we decided to run each test in a separate GDB session
@@ -171,11 +173,13 @@ TEST_RETURN_TYPE = Tuple[CompletedProcess[str], str, float]
 
 
 def run_test(
-        test_case: str, args: argparse.Namespace, gdb_path: str, gdbinit_path: str, port: int = None
+    test_case: str, args: argparse.Namespace, gdb_path: str, gdbinit_path: str, port: int = None
 ) -> TEST_RETURN_TYPE:
     prescript = None
     if args.cov:
-        prescript = "import sys;sys.path.append('/pwndbg');import coverage;coverage.process_startup();"
+        prescript = (
+            "import sys;sys.path.append('/pwndbg');import coverage;coverage.process_startup();"
+        )
 
     env = os.environ.copy()
     env["LANG"] = "en_US.UTF-8"
@@ -191,8 +195,12 @@ def run_test(
 
     started_at = time.time()
     # result = run_gdb(gdb_path, gdb_args, env=env, capture_output=not args.serial)
-    result = run_python_with_debugger("/pwndbg/tests/pytests_launcher.py", prescript=prescript, env=env,
-                                      capture_output=not args.serial)
+    result = run_python_with_debugger(
+        "/pwndbg/tests/pytests_launcher.py",
+        prescript=prescript,
+        env=env,
+        capture_output=not args.serial,
+    )
     duration = time.time() - started_at
     return result, test_case, duration
 
@@ -244,11 +252,11 @@ class TestStats:
 
 
 def run_tests_and_print_stats(
-        tests_list: List[str],
-        args: argparse.Namespace,
-        gdb_path: str,
-        gdbinit_path: str,
-        test_dir_path: str,
+    tests_list: List[str],
+    args: argparse.Namespace,
+    gdb_path: str,
+    gdbinit_path: str,
+    test_dir_path: str,
 ):
     stats = TestStats()
     start = time.time()
@@ -287,7 +295,9 @@ def run_tests_and_print_stats(
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Run tests.")
-    parser.add_argument("-t", "--type", dest="type", choices=["gdb", "cross-arch", "lldb"], default="gdb")
+    parser.add_argument(
+        "-t", "--type", dest="type", choices=["gdb", "cross-arch", "lldb"], default="gdb"
+    )
 
     parser.add_argument(
         "-p",
@@ -346,17 +356,17 @@ def main():
         gdbinit_path = os.path.join(root_dir, "gdbinit.py")
         if args.type == "gdb":
             gdb_path = shutil.which("gdb")
-            os.environ['PWNDBG_DEBUGGER'] = 'gdb'
+            os.environ["PWNDBG_DEBUGGER"] = "gdb"
             INITIALIZE_GDB[1] = gdbinit_path
 
         elif args.type == "lldb":
-            os.environ['PWNDBG_DEBUGGER'] = 'lldb'
-            lldb_command = f"uv run python /pwndbg/pwndbg-lldb.py"
+            os.environ["PWNDBG_DEBUGGER"] = "lldb"
+            lldb_command = "uv run python /pwndbg/pwndbg-lldb.py"
             gdb_path = ""
 
         elif args.type == "cross-arch":
             INITIALIZE_GDB[1] = gdbinit_path
-            os.environ['PWNDBG_DEBUGGER'] = 'gdb-multiarch'
+            os.environ["PWNDBG_DEBUGGER"] = "gdb-multiarch"
             if (gdb_multiarch := shutil.which("gdb-multiarch")) is not None:
                 gdb_path = gdb_multiarch
             else:
