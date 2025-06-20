@@ -1,4 +1,4 @@
-ZIGPATH        ?=     ../../../../.zig
+ZIGPATH        ?=     ../../.zig
 ZIGCC		=	  $(ZIGPATH)/zig cc
 
 CC              =	   gcc
@@ -130,6 +130,7 @@ issue_1565.out: issue_1565.c
 # TODO: Link against a specific GLIBC version >= 2.26
 initialized_heap_i386_big.out: initialized_heap.c
 	@echo "[+] Building initialized_heap_i386_big.out"
+	@echo "ZIGCC: ${ZIGCC}"
 	${ZIGCC} \
 	${CFLAGS} \
 	-target x86-linux-gnu \

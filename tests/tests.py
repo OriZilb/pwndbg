@@ -14,9 +14,9 @@ from typing import List
 from typing import Tuple
 
 root_dir = os.path.realpath("../")
-GDB_RUN_PYTHON = lambda py_module: ["--command", f"{py_module}"]
+GDB_RUN_PYTHON = lambda py_module: ["--command", f"{py_module}"] if py_module else []
 GDB_RUN_PRESCRIPT = lambda prescript: ["-ex", f"{prescript}"] if prescript else []
-LLDB_RUN_PYTHON = lambda py_module: f"'python3 {py_module}'"
+LLDB_RUN_PYTHON = lambda py_module: f"'python3 {py_module}'" if py_module else ""
 LLDB_RUN_PRESCRIPT = lambda prescript: f"'python3 -c \"{prescript}\"'" if prescript else ""
 GDB_QUIT = ["--eval-command", "quit"]
 INITIALIZE_GDB = ["--init-command", "/pwndbg/gdbinit.py"]
@@ -173,7 +173,7 @@ TEST_RETURN_TYPE = Tuple[CompletedProcess[str], str, float]
 
 
 def run_test(
-    test_case: str, args: argparse.Namespace, gdb_path: str, gdbinit_path: str, port: int = None
+    test_case: str, args: argparse.Namespace, port: int = None
 ) -> TEST_RETURN_TYPE:
     prescript = None
     if args.cov:
@@ -254,8 +254,6 @@ class TestStats:
 def run_tests_and_print_stats(
     tests_list: List[str],
     args: argparse.Namespace,
-    gdb_path: str,
-    gdbinit_path: str,
     test_dir_path: str,
 ):
     stats = TestStats()
@@ -263,14 +261,14 @@ def run_tests_and_print_stats(
 
     if args.serial:
         for test in tests_list:
-            result = run_test(test, args, gdb_path, gdbinit_path, reserve_port())
+            result = run_test(test, args, reserve_port())
             stats.handle_test_result(result, args, test_dir_path)
     else:
         print("\nRunning tests in parallel")
         with concurrent.futures.ThreadPoolExecutor(max_workers=os.cpu_count()) as executor:
             for test in tests_list:
                 executor.submit(
-                    run_test, test, args, gdb_path, gdbinit_path, reserve_port()
+                    run_test, test, args, reserve_port()
                 ).add_done_callback(
                     lambda future: stats.handle_test_result(future.result(), args, test_dir_path)
                 )
@@ -339,6 +337,7 @@ TEST_FOLDER_NAME = {
 
 
 def main():
+    os.environ['TEST_BINARIES_ROOT'] = '/pwndbg/tests/binaries'
     args = parse_args()
     if args.cov:
         print("Will run codecov")
@@ -372,7 +371,7 @@ def main():
             else:
                 supports_arches = "py import os; archs = ['i386', 'aarch64', 'arm', 'mips', 'riscv', 'sparc']; os._exit(3) if len([arch for arch in archs if arch in gdb.architecture_names()]) == len(archs) else os._exit(2)"
 
-                result = run_gdb("gdb", ["-ex", supports_arches])
+                result = run_python_with_debugger(python_module='', prescript=supports_arches)
                 # GDB supports cross architecture targets
                 if result.returncode == 3:
                     gdb_path = shutil.which("gdb")
@@ -397,12 +396,12 @@ def main():
         tests_list = get_tests_list(
             args.collect_only, args.test_name_filter, gdbinit_path, test_dir_path
         )
-        run_tests_and_print_stats(tests_list, args, gdb_path, gdbinit_path, test_dir_path)
+        run_tests_and_print_stats(tests_list, args, test_dir_path)
     elif args.type == "lldb":
         tests_list = get_tests_list(
             args.collect_only, args.test_name_filter, gdbinit_path, test_dir_path
         )
-        run_tests_and_print_stats(tests_list, args, gdb_path, gdbinit_path, test_dir_path)
+        run_tests_and_print_stats(tests_list, args, test_dir_path)
 
 
 if __name__ == "__main__":
