@@ -10,6 +10,7 @@ import pwndbg.aglib.regs
 import pwndbg.commands
 import pwndbg.commands.canary
 import pwndbg.commands.context
+
 from . import get_binary
 
 REFERENCE_BINARY = get_binary("reference-binary.out")
@@ -71,7 +72,7 @@ def test_context_disasm_show_fd_filepath(start_binary):
 
     line_fd = line_fd.strip()
     assert re.match(
-        r"fd:\s+3 \([a-z/]*pwndbg/tests/gdb-tests/tests/binaries/use-fds.out\)", line_fd
+        r"fd:\s+3 \([a-z/]*pwndbg/tests/binaries/use-fds.out\)", line_fd
     )
 
     line_buf = line_buf.strip()

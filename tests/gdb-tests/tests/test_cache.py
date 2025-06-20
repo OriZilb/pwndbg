@@ -3,6 +3,7 @@ from __future__ import annotations
 import pwndbg
 from pwndbg.dbg import EventType
 from pwndbg.lib import cache
+
 from . import get_binary
 
 BINARY = get_binary("reference-binary.out")
@@ -26,7 +27,6 @@ def test_cache_single_value(start_binary):
     assert foo() == x == 1
 
     foo.cache.clear()
-
 
     assert foo() == x == 2
     assert foo() == x == 2

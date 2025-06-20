@@ -1,18 +1,31 @@
 from __future__ import annotations
 
 import re
+
 from . import utils
+
+
 def test_config():
-    result = utils.run_lldb_command(["set context-disasm-lines 8", "config"], run_file_to_use_pwndbg_commands=True)
+    result = utils.run_lldb_command(
+        ["set context-disasm-lines 8", "config"], run_file_to_use_pwndbg_commands=True
+    )
     assert "8 (10)" in result.stdout
 
-    result = utils.run_lldb_command(["set banner-separator #", "theme"], run_file_to_use_pwndbg_commands=True)
+    result = utils.run_lldb_command(
+        ["set banner-separator #", "theme"], run_file_to_use_pwndbg_commands=True
+    )
     assert "'#' ('\u2500')" in result.stdout
 
-    result = utils.run_lldb_command(["set global-max-fast 0x80", "heap-config"], run_file_to_use_pwndbg_commands=True)
+    result = utils.run_lldb_command(
+        ["set global-max-fast 0x80", "heap-config"], run_file_to_use_pwndbg_commands=True
+    )
     assert "'0x80' ('0')" in result.stdout
+
+
 def test_config_filtering():
-    out = utils.run_lldb_command(["config context-disasm-lines"], run_file_to_use_pwndbg_commands=True).stdout.split('\n')
+    out = utils.run_lldb_command(
+        ["config context-disasm-lines"], run_file_to_use_pwndbg_commands=True
+    ).stdout.split("\n")
 
     lines_matched = [re.match(r"Name\s+Documentation\s+Value\s+\(Default\)", line) for line in out]
     assert any(lines_matched)
@@ -32,6 +45,7 @@ def test_config_filtering():
         out[4]
         == "You can generate a configuration file using `configfile` - then put it in your .gdbinit after initializing pwndbg."
     )
+
 
 def test_config_filtering_missing():
     out = utils.run_lldb_command(["config asdasdasdasd"], run_file_to_use_pwndbg_commands=True)

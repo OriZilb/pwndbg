@@ -1,10 +1,11 @@
 """
 This file should consist of global test fixtures.
 """
-''' This is a basic template to make lldb tests work just like gdb tests, although 
+
+''' This is a basic template to make lldb tests work just like gdb tests, although
     pwndbg uses the two debuggers differently. To translate large amount of tests easily
-    from gdb usage I would use the function below, to make minimal changes to the logic. 
-    As I don't plan to translate large amount of tests from gdb to lldb, I will leave it commented out for now. 
+    from gdb usage I would use the function below, to make minimal changes to the logic.
+    As I don't plan to translate large amount of tests from gdb to lldb, I will leave it commented out for now.
 
 from __future__ import annotations
 

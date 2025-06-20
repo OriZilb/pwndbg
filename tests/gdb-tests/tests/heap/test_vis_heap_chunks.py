@@ -5,7 +5,9 @@ import gdb
 import pwndbg.aglib.arch
 import pwndbg.aglib.memory
 import pwndbg.aglib.vmmap
+
 from .. import get_binary
+
 HEAP_VIS = get_binary("heap_vis.out")
 
 

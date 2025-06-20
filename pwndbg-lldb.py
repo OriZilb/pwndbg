@@ -42,7 +42,8 @@ PARSER.add_argument(
     default=[],
     help="commands to run after starting the debugger",
 )
-COMMAND_LIST_END_DELIMITER = ';'
+COMMAND_LIST_END_DELIMITER = ";"
+
 
 def find_lldb_version() -> List[int]:
     """

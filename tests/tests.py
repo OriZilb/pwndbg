@@ -172,9 +172,7 @@ def get_tests_list(
 TEST_RETURN_TYPE = Tuple[CompletedProcess[str], str, float]
 
 
-def run_test(
-    test_case: str, args: argparse.Namespace, port: int = None
-) -> TEST_RETURN_TYPE:
+def run_test(test_case: str, args: argparse.Namespace, port: int = None) -> TEST_RETURN_TYPE:
     prescript = None
     if args.cov:
         prescript = (
@@ -267,9 +265,7 @@ def run_tests_and_print_stats(
         print("\nRunning tests in parallel")
         with concurrent.futures.ThreadPoolExecutor(max_workers=os.cpu_count()) as executor:
             for test in tests_list:
-                executor.submit(
-                    run_test, test, args, reserve_port()
-                ).add_done_callback(
+                executor.submit(run_test, test, args, reserve_port()).add_done_callback(
                     lambda future: stats.handle_test_result(future.result(), args, test_dir_path)
                 )
 
@@ -337,7 +333,7 @@ TEST_FOLDER_NAME = {
 
 
 def main():
-    os.environ['TEST_BINARIES_ROOT'] = '/pwndbg/tests/binaries'
+    os.environ["TEST_BINARIES_ROOT"] = "/pwndbg/tests/binaries"
     args = parse_args()
     if args.cov:
         print("Will run codecov")
@@ -371,7 +367,7 @@ def main():
             else:
                 supports_arches = "py import os; archs = ['i386', 'aarch64', 'arm', 'mips', 'riscv', 'sparc']; os._exit(3) if len([arch for arch in archs if arch in gdb.architecture_names()]) == len(archs) else os._exit(2)"
 
-                result = run_python_with_debugger(python_module='', prescript=supports_arches)
+                result = run_python_with_debugger(python_module="", prescript=supports_arches)
                 # GDB supports cross architecture targets
                 if result.returncode == 3:
                     gdb_path = shutil.which("gdb")

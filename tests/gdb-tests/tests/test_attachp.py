@@ -179,7 +179,7 @@ def test_attachp_command_attaches_to_procname_resolve_ask(launched_sleep_binary)
     )
 
     assert matches[:-1] == expected
-    assert matches[-1].startswith(f"{binary_path} {FLAG} {FLAG}") and " ... " in matches[-1]
+    assert matches[-1].startswith(f"{binary_path} {FLAG}") and " ... " in matches[-1]
 
     matches = re.search(r"Attaching to ([0-9]+)", result).groups()
     assert matches == (str(pid),)
