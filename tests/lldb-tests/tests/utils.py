@@ -15,13 +15,19 @@ RUN_FILE_TO_USE_PWNDBG_COMMSNDS = [
 
 
 def build_lldb_command(commands, run_file_to_use_pwndbg_commands):
-    run_file_commands = RUN_FILE_TO_USE_PWNDBG_COMMSNDS if run_file_to_use_pwndbg_commands else []
-    command = (
-        [os.environ["DEBUGGER_COMMAND"], "--silent", "--commands"]
-        + run_file_commands
-        + [f"'{command}'" for command in commands]
-        + ["c", "quit;", os.environ["LLDB_FLAGS"]]
-    )
+    if run_file_to_use_pwndbg_commands:
+        command = (
+            [os.environ["DEBUGGER_COMMAND"], "--silent", "--commands"]
+            + RUN_FILE_TO_USE_PWNDBG_COMMSNDS
+            + [f"'{command}'" for command in commands]
+            + ["c", "quit", os.environ["COMMAND_LIST_END_DELIMITER"], os.environ["LLDB_FLAGS"]]
+        )
+    else:
+        command = (
+            [os.environ["DEBUGGER_COMMAND"], "--silent", "--commands"]
+            + [f"'{command}'" for command in commands]
+            + ["quit", os.environ["COMMAND_LIST_END_DELIMITER"], os.environ["LLDB_FLAGS"]]
+        )
     return " ".join(command)
 
 
